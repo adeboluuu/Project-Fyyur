@@ -17,7 +17,7 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
-from models import db,Artist,Venue,Shoe
+from models import db,Artist,Venue,Show
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -124,7 +124,7 @@ def show_venue(venue_id):
 
   data = venue.to_dict()
   data['forthcoming_shows'] = forthcoming_shows
-  data['forthcoming_shows_count'] = len(upcoming_shows)
+  data['forthcoming_shows_count'] = len(forthcoming_shows)
   data['past_shows_count'] = len(past_shows)
   data['past_shows'] = past_shows
 
@@ -149,8 +149,7 @@ def create_venue_form():
 @app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
     form = VenueForm(request.form)
-    if form.validate():
-     error = False
+    error = False
     try:
         venue = Venue()
         venue.name = request.form['name']
@@ -174,9 +173,9 @@ def create_venue_submission():
     finally:
         db.session.close()
         if error:
-         flash('An error occured. Venue ' + request.form['name'] + ' Could not be listed')
+          flash('An error occured. Venue ' + request.form['name'] + ' Could not be listed')
         else:
-         flash('Venue ' + request.form['name'] +' was successfully listed!')
+          flash('Venue ' + request.form['name'] +' was successfully listed!')
 
     return render_template('pages/home.html')
 
@@ -230,21 +229,11 @@ def search_artists():
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-  artist = Artist.query.filter_by(id=artist_id).first()
-  past_shows = list(filter(lambda x: x.start_time <datetime.today(), artist.shows)) 
-  past_shows = list(map(lambda x: x.show_venue(), past_shows))
-  upcoming_shows = list(filter(lambda x: x.start_time >=datetime.today(), artist.shows))
-  upcoming_shows = list(map(lambda x: x.show_venue(), upcoming_shows))  
-
-  data = artist.to_dict()
-  print(data)
-  data['past_shows'] = past_shows
-  data['past_shows_count'] = len(past_shows)
-  data['upcoming_shows'] = upcoming_shows
-  data['upcoming_shows_count'] = len(upcoming_shows)
-
-
-  return render_template('pages/show_artist.html', artist=data)
+  past_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist_id).filter(Show.start_time>datetime.now()).all()
+  past_shows = []  
+  upcoming_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist_id).filter(Show.start_time>datetime.now()).all()
+  upcoming_shows = []
+  return render_template('pages/show_artist.html', artist=artist)
   # shows the artist page with the given artist_id
   # TODO: replace with real artist data from the artist table, using artist_id
 
@@ -399,43 +388,7 @@ def shows():
         })
   # displays list of shows at /shows
   # TODO: replace with real venues data.
-  # data=[{
-  #   "venue_id": 1,
-  #   "venue_name": "The Musical Hop",
-  #   "artist_id": 4,
-  #   "artist_name": "Guns N Petals",
-  #   "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
-  #   "start_time": "2019-05-21T21:30:00.000Z"
-  # }, {
-  #   "venue_id": 3,
-  #   "venue_name": "Park Square Live Music & Coffee",
-  #   "artist_id": 5,
-  #   "artist_name": "Matt Quevedo",
-  #   "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-  #   "start_time": "2019-06-15T23:00:00.000Z"
-  # }, {
-  #   "venue_id": 3,
-  #   "venue_name": "Park Square Live Music & Coffee",
-  #   "artist_id": 6,
-  #   "artist_name": "The Wild Sax Band",
-  #   "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-  #   "start_time": "2035-04-01T20:00:00.000Z"
-  # }, {
-  #   "venue_id": 3,
-  #   "venue_name": "Park Square Live Music & Coffee",
-  #   "artist_id": 6,
-  #   "artist_name": "The Wild Sax Band",
-  #   "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-  #   "start_time": "2035-04-08T20:00:00.000Z"
-  # }, {
-  #   "venue_id": 3,
-  #   "venue_name": "Park Square Live Music & Coffee",
-  #   "artist_id": 6,
-  #   "artist_name": "The Wild Sax Band",
-  #   "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-  #   "start_time": "2035-04-15T20:00:00.000Z"
-  # }]
-  # return render_template('pages/shows.html', shows=data)
+  return render_template('pages/shows.html', shows=data)
 
 @app.route('/shows/create')
 def create_shows():
